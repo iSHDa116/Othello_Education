@@ -5,7 +5,6 @@ using UnityEngine;
 public class TileCtrler : MonoBehaviour
 {
     int x, y;
-    StoneController stoneCtrler;
     // Start is called before the first frame update
     void Start()
     {
@@ -14,14 +13,22 @@ public class TileCtrler : MonoBehaviour
     }
     void OnMouseDown()
     {
-        if(stoneCtrler == null) Debug.LogError("stoneCtrler is null");
-        if (GameManager.isBlack)
+        if (BoardManager.boardInfo[x, y] == StoneInfo.Empty)
         {
-            stoneCtrler.PutStone(StoneInfo.Black, x, y);
+            if (GameManager.isBlack)
+            {
+                StoneController.instance.PutStone(StoneInfo.Black, x, y);
+                
+            }
+            else if (!GameManager.isBlack)
+            {
+                StoneController.instance.PutStone(StoneInfo.White, x, y);
+            }
         }
-        else if (!GameManager.isBlack)
+        else
         {
-            stoneCtrler.PutStone(StoneInfo.White, x, y);
+            Debug.LogWarning("すでに駒が置かれています。");
         }
+
     }
 }
