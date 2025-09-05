@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
-    [SerializeField] Text isPlayerText;
+    public Text isPlayerText;
 
     public void TurnText(bool isBlack)
     {
@@ -11,6 +11,6 @@ public class UIManager : MonoBehaviour
         isPlayerText.color = (isBlack) ? Color.black : Color.white;
         isPlayerText.GetComponent<Outline>().effectColor = (isBlack) ? Color.white : Color.black;
 
-        Debug.Log(isPlayerText.text);
+        //Debug.Log(isPlayerText.text);
     }
 }

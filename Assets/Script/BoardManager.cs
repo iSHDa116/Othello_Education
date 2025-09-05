@@ -2,27 +2,40 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class BoardManager : MonoBehaviour
 {
+    public static BoardManager instance;
     public static int width = 8, height = 8; //盤面のマス目の数。widthは横のマス目の数、heightは縦のマス目の数。
     public static StoneInfo[,] boardInfo = new StoneInfo[width, height]; //盤面の情報を格納する2次元配列。各マスの状態を表す。
     public static Transform[,] tileInfo = new Transform[width, height];
     [SerializeField] GameObject tilePrefab; //タイルのプレハブ
     [SerializeField] StoneController stoneCtrler;
+    [SerializeField] TileManager tm;
     [SerializeField] GameManager gm;
+    Vector2Int[] directions = 
+        {
+            new Vector2Int(1, 0), // →右
+            new Vector2Int(-1, 0), // ←左
+            new Vector2Int(0, 1), // ↑上
+            new Vector2Int(0, -1), // ↓下
+            new Vector2Int(1, 1), //　↗︎右上
+            new Vector2Int(-1, 1), //　↖︎左上
+            new Vector2Int(1, -1), //　↘︎右下
+            new Vector2Int(-1, -1), //　↙︎左斜め下
+        };
+    void Awake()
+    {
+        instance = this;
+    }
     void Start()
     {
         MakeBoard(); //盤面を作成
         stoneCtrler.FirstStone();
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
+        Invoke("HighLightTiles",0.1f);
 
     }
-
     void MakeBoard()
     {
         for (int x = 0; x < width; x++)
@@ -33,40 +46,64 @@ public class BoardManager : MonoBehaviour
                 GameObject tile = Instantiate(tilePrefab, new Vector3(x, y, 0), Quaternion.identity);
                 tile.transform.SetParent(transform); //タイルをBoardManagerの子オブジェクトに設定
                 tile.name = "Tile_" + x + "_" + y; //タイルの名前
+
+                tileInfo[x, y] = tile.transform;
                 boardInfo[x, y] = StoneInfo.Empty; //初期状態は0（空
-                Debug.Log($"boardInfo[{x}, {y}]を{boardInfo[x, y]}にしました");
+
+                if (boardInfo[x, y] == StoneInfo.Empty)
+                {
+                    Debug.Log($"boardInfo[{x}, {y}]を{boardInfo[x, y]}にしました");
+                }
+                if (tileInfo[x, y] != null)
+                {
+                    Debug.Log($"tileInfo[{x}, {y}]に{tileInfo[x, y].name}を追加しました");
+                }
             }
         }
     }
-    public bool IsCanFlipStone(Vector2Int pos)
+    //盤面内にいるかの判定。trueなら盤面にいる。falseなら盤面外
+    public bool IsOutBoard(int x, int y)
+    {
+        return (x >= 0 && x < width && y >= 0 && y < height);
+    }
+    public void HighLightTiles()
+    {
+        for (int y = 0; y < width; y++)
+        {
+            for (int x = 0; x < height; x++)
+            {
+                TileCtrler tile = tileInfo[x, y].GetComponent<TileCtrler>();
+                if (IsCanPutStone(x, y))
+                {
+                    tm.TileChangeHighLight(tile);
+                }
+                else
+                {
+                    tm.TileChangeOriginalColor(tile);
+                }
+            }
+        }
+    }
+    public bool IsCanPutStone(int x, int y)
     {
         //盤外だったり、すでに駒があった場合は、処理を実行しない様にする。
-        if (boardInfo[pos.x, pos.y] != StoneInfo.Empty || IsOutBoard(pos.x, pos.y))
+        if (boardInfo[x, y] != StoneInfo.Empty || !IsOutBoard(x, y))
             return false;
 
         // 自分の現在の駒の色を条件分岐で判定
         StoneInfo myStone = (GameManager.isBlack) ? StoneInfo.Black : StoneInfo.White;
-        StoneInfo opponentStone = (GameManager.isBlack) ? StoneInfo.White : StoneInfo.Black;
-
-        // 
-        Vector2Int[] directions = {
-            new Vector2Int(0,1), //
-            new Vector2Int(0, -1), //
-            new Vector2Int(1, 0), //
-            new Vector2Int(-1, 0), //
-            new Vector2Int(-1, 1), //
-            new Vector2Int(1, 1), //
-            new Vector2Int(-1, -1), //
-            new Vector2Int(1,-1), //
-        };
+        StoneInfo opponentStone = (!GameManager.isBlack) ? StoneInfo.Black : StoneInfo.White;
 
         foreach (Vector2Int dir in directions)
         {
-            int newX = pos.x + dir.x; //
-            int newY = pos.y + dir.y; //
+            //dirの方向に、相手の駒が無いか1マスずつ調べる
+            int newX = x + dir.x; //横方向に1マスずらす
+            int newY = y + dir.y; //縦方向に1マスずらす
+
             //駒があるか？ないか？の判定
             bool hasOpponent = false;
-            
+            int opponents = 0;
+
             //盤面の中なら
             while (IsOutBoard(newX, newY))
             {
@@ -75,6 +112,8 @@ public class BoardManager : MonoBehaviour
                     newX += dir.x; //
                     newY += dir.y; //
                     hasOpponent = true; //
+                    opponents++;
+                    //Debug.Log($"{dir}の方向に、ひっくり返せる駒が{opponents}マスありました");
                 }
                 else if (boardInfo[newX, newY] == myStone) //
                 {
@@ -85,16 +124,55 @@ public class BoardManager : MonoBehaviour
                     }
                     else
                     {
+                        //Debug.Log($"判定終了。{dir}の方向にひっくり返せるマスはありませんでした。");
                         break;
                     }
                 }
+                else
+                {
+                    break;
+                }
             }
         }
+        //Debug.Log($"Tile_{x}_{y}には置けません");
         return false;
     }
-    //盤面内にいるかの判定。trueなら盤面にいる。falseなら盤面外
-    public bool IsOutBoard(int x, int y)
+    public void FlipStone(Vector2Int pos)
     {
-        return (x >= 0 && x < width && y >= 0 && y < height);
+        if (boardInfo[pos.x, pos.y] == StoneInfo.Empty || IsOutBoard(pos.x, pos.y))
+            return;
+
+        StoneInfo myStone = (GameManager.isBlack) ? StoneInfo.Black : StoneInfo.White;
+        StoneInfo opponentStone = (GameManager.isBlack) ? StoneInfo.White : StoneInfo.Black;
+
+        foreach (Vector2Int dir in directions)
+        {
+            int newX = pos.x + dir.x;
+            int newY = pos.y + dir.y;
+            List<Vector2Int> stoneToFlip = new List<Vector2Int>();
+
+            while (IsOutBoard(newX, newY) && boardInfo[newX, newY] == opponentStone)
+            {
+                stoneToFlip.Add(new Vector2Int(newX, newY));
+                newX += dir.x;
+                newY += dir.y;
+            }
+
+            if (IsOutBoard(newX, newY) || boardInfo[newX, newY] == myStone)
+            {
+                foreach (Vector2Int stoneFlip in stoneToFlip)
+                {
+                    int stoneX = stoneFlip.x;
+                    int stoneY = stoneFlip.y;
+
+                    boardInfo[stoneX, stoneY] = myStone;
+
+                    Transform tile = tileInfo[stoneX, stoneY].transform;
+                    Transform stone = tile.transform.Find("Stone");
+                    stone.GetComponent<SpriteRenderer>().color = (GameManager.isBlack) ? Color.black : Color.white;
+                }
+            }
+        }
+        
     }
 }
