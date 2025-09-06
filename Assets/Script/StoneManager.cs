@@ -5,10 +5,10 @@ using UnityEngine;
 
 public enum StoneInfo{Empty, Black, White}
 
-public class StoneController : MonoBehaviour
+public class StoneManager : MonoBehaviour
 {
     public GameObject stonePrefab;
-    public static StoneController instance;
+    public static StoneManager instance;
 
     // Start is called before the first frame update
     void Awake()
@@ -23,11 +23,6 @@ public class StoneController : MonoBehaviour
         }
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
     public void FirstStone()
     {
         PutStone(StoneInfo.White, 3, 3);

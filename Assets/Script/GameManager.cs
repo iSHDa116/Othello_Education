@@ -25,8 +25,4 @@ public class GameManager : MonoBehaviour
         bm.HighLightTiles();
 
     }
-    public void FlipStone()
-    {
-
-    }
 }

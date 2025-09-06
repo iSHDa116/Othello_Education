@@ -6,14 +6,19 @@ using UnityEngine.Tilemaps;
 
 public class BoardManager : MonoBehaviour
 {
-    public static BoardManager instance;
+    //盤面の情報
     public static int width = 8, height = 8; //盤面のマス目の数。widthは横のマス目の数、heightは縦のマス目の数。
     public static StoneInfo[,] boardInfo = new StoneInfo[width, height]; //盤面の情報を格納する2次元配列。各マスの状態を表す。
     public static Transform[,] tileInfo = new Transform[width, height];
     [SerializeField] GameObject tilePrefab; //タイルのプレハブ
-    [SerializeField] StoneController stoneCtrler;
+
+    //インスタンス化
+    public static BoardManager instance;
+    [SerializeField] StoneManager stoneCtrler;
     [SerializeField] TileManager tm;
     [SerializeField] GameManager gm;
+
+    //判定の向き
     Vector2Int[] directions = 
         {
             new Vector2Int(1, 0), // →右
@@ -25,6 +30,8 @@ public class BoardManager : MonoBehaviour
             new Vector2Int(1, -1), //　↘︎右下
             new Vector2Int(-1, -1), //　↙︎左斜め下
         };
+    
+    //シングルトンの作成
     void Awake()
     {
         instance = this;
@@ -32,24 +39,25 @@ public class BoardManager : MonoBehaviour
     void Start()
     {
         MakeBoard(); //盤面を作成
-        stoneCtrler.FirstStone();
-        Invoke("HighLightTiles",0.1f);
-
+        stoneCtrler.FirstStone(); //最初の駒をセット
+        Invoke("HighLightTiles",0.1f); //0.1秒後にハイライトを生成する。Invoke()をつけることで、originalColorを正しく取得できる様にしています
     }
+    //盤面を生成する
     void MakeBoard()
     {
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                //マス目の生成
+                //マス目を生成
                 GameObject tile = Instantiate(tilePrefab, new Vector3(x, y, 0), Quaternion.identity);
                 tile.transform.SetParent(transform); //タイルをBoardManagerの子オブジェクトに設定
                 tile.name = "Tile_" + x + "_" + y; //タイルの名前
 
-                tileInfo[x, y] = tile.transform;
+                tileInfo[x, y] = tile.transform;//tileInfoに生成したマスを登録
                 boardInfo[x, y] = StoneInfo.Empty; //初期状態は0（空
 
+                //Null処理
                 if (boardInfo[x, y] == StoneInfo.Empty)
                 {
                     Debug.Log($"boardInfo[{x}, {y}]を{boardInfo[x, y]}にしました");
@@ -66,24 +74,31 @@ public class BoardManager : MonoBehaviour
     {
         return (x >= 0 && x < width && y >= 0 && y < height);
     }
+    //駒を置けるマスを黄色にする
     public void HighLightTiles()
     {
         for (int y = 0; y < width; y++)
         {
             for (int x = 0; x < height; x++)
             {
+                //マスの方法を取得
                 TileCtrler tile = tileInfo[x, y].GetComponent<TileCtrler>();
+
+                //もし指定した場所に駒を置けたら
                 if (IsCanPutStone(x, y))
                 {
+                    //マスを黄色に変える
                     tm.TileChangeHighLight(tile);
                 }
                 else
                 {
+                    //元の色に戻す
                     tm.TileChangeOriginalColor(tile);
                 }
             }
         }
     }
+    //駒を置けるかの判定
     public bool IsCanPutStone(int x, int y)
     {
         //盤外だったり、すでに駒があった場合は、処理を実行しない様にする。
@@ -137,6 +152,7 @@ public class BoardManager : MonoBehaviour
         //Debug.Log($"Tile_{x}_{y}には置けません");
         return false;
     }
+    //盤面上の駒をひっくり返す
     public void FlipStone(Vector2Int pos)
     {
         if (boardInfo[pos.x, pos.y] == StoneInfo.Empty || IsOutBoard(pos.x, pos.y))
@@ -173,6 +189,6 @@ public class BoardManager : MonoBehaviour
                 }
             }
         }
-        
+
     }
 }
