@@ -14,7 +14,7 @@ public class BoardManager : MonoBehaviour
 
     //インスタンス化
     public static BoardManager instance;
-    [SerializeField] StoneManager stoneCtrler;
+    [SerializeField] StoneManager sm;
     [SerializeField] TileManager tm;
     [SerializeField] GameManager gm;
 
@@ -39,7 +39,7 @@ public class BoardManager : MonoBehaviour
     void Start()
     {
         MakeBoard(); //盤面を作成
-        stoneCtrler.FirstStone(); //最初の駒をセット
+        sm.FirstStone(); //最初の駒をセット
         Invoke("HighLightTiles",0.1f); //0.1秒後にハイライトを生成する。Invoke()をつけることで、originalColorを正しく取得できる様にしています
     }
     //盤面を生成する
